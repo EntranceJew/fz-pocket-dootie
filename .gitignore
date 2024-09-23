@@ -1,0 +1,14 @@
+dist/*
+.vscode
+.clang-format
+.clangd
+.editorconfig
+.env
+.ufbt
+*.code-workspace
+
+# assets already in the gfx folder
+/images/cursor_*_*_[fso].png
+/images/dootie_*_*_[fso].png
+/images/room.png
+!/images/dootie_IDLE_*_[fso].png

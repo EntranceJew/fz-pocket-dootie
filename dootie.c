@@ -5,19 +5,14 @@
 #include <storage/storage.h>
 
 /**
- * the really fucking sickly and disgusting data tables
- *
- * TODO: if you find out how to have a double-indexed thing with enum access & variable elements,
- *  define it as that please for all that is holy
+ * the big normal smelling data table
  *
  * Shape (Silhouette, Interior Lines)
  * Fill ([in]Front Of Thing)
  * Outline (Helps Read Shape, Highlight)
  */
 
-
-
-const TriBlendFrameSequence alt_dootie_sprites[] = {
+const TriBlendFrameSequence dootie_sprites[] = {
     // NOLINT(*-interfaces-global-init)
     [DAS_DEAD] =
         (TriBlendFrameSequence){
@@ -181,7 +176,7 @@ void dootie_draw(const Dootie dootie, Canvas* canvas, const uint8_t frame, const
     // const uint8_t even_frame = frame % 2;
     const Point2D draw_point = room_screen_to_world(dootie.pos);
 
-    const TriBlendFrameSequence seq = alt_dootie_sprites[dootie.state];
+    const TriBlendFrameSequence seq = dootie_sprites[dootie.state];
     const TriBlendFrame tri_blend_frame = seq.frames[frame % seq.num_frames];
 
     canvas_set_color(canvas, invert ? ColorWhite : ColorBlack);
@@ -192,7 +187,8 @@ void dootie_draw(const Dootie dootie, Canvas* canvas, const uint8_t frame, const
 
     // add a weird phase to drawing highlighted characters
     if(invert) {
-        canvas_set_color(canvas, frame % 3 ? ColorBlack : ColorWhite);
+        const bool is_even_sequence = 0 == seq.num_frames % 2;
+        canvas_set_color(canvas, frame % (is_even_sequence ? 3 : 2) ? ColorBlack : ColorWhite);
     }
     canvas_draw_icon(canvas, draw_point.x, draw_point.y, tri_blend_frame.o);
 }

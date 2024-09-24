@@ -26,4 +26,4 @@ typedef struct Cursor {
 } Cursor;
 
 int cursor_handle_input_event(Cursor* cursor, InputEvent event);
-void cursor_draw(Cursor cursor, Canvas* canvas);
+void cursor_draw(Cursor cursor, Canvas* canvas, const uint8_t frame, const bool invert);

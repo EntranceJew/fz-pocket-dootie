@@ -6,98 +6,39 @@
 
 #define TAG "PocketDootie"
 
-const Icon* get_cursor_sprite_s(Cursor cursor) {
-    switch(cursor.state) {
-    case CAS_SELECT:
-        return &I_cursor_SELECT_01_s;
-    case CAS_PET:
-        return &I_cursor_PET_01_s;
-    case CAS_GRAB:
-        return &I_cursor_GRAB_01_s;
-    case CAS_DROP:
-        return &I_cursor_DROP_01_s;
-    case CAS_POINT_R_UP:
-        return &I_cursor_POINT_R_UP_01_s;
-    case CAS_POINT_R_RIGHT:
-        return &I_cursor_POINT_R_RIGHT_01_s;
-    case CAS_POINT_R_DOWN:
-        return &I_cursor_POINT_R_DOWN_01_s;
-    case CAS_POINT_R_LEFT:
-        return &I_cursor_POINT_R_LEFT_01_s;
-    case CAS_POINT_L_UP:
-        return &I_cursor_POINT_L_UP_01_s;
-    case CAS_POINT_L_RIGHT:
-        return &I_cursor_POINT_L_RIGHT_01_s;
-    case CAS_POINT_L_DOWN:
-        return &I_cursor_POINT_L_DOWN_01_s;
-    case CAS_POINT_L_LEFT:
-        return &I_cursor_POINT_L_LEFT_01_s;
-    default:
-        return NULL;
-    }
-}
-
-const Icon* get_cursor_sprite_f(Cursor cursor) {
-    switch(cursor.state) {
-    case CAS_SELECT:
-        return &I_cursor_SELECT_01_f;
-    case CAS_PET:
-        return &I_cursor_PET_01_f;
-    case CAS_GRAB:
-        return &I_cursor_GRAB_01_f;
-    case CAS_DROP:
-        return &I_cursor_DROP_01_f;
-    case CAS_POINT_R_UP:
-        return &I_cursor_POINT_R_UP_01_f;
-    case CAS_POINT_R_RIGHT:
-        return &I_cursor_POINT_R_RIGHT_01_f;
-    case CAS_POINT_R_DOWN:
-        return &I_cursor_POINT_R_DOWN_01_f;
-    case CAS_POINT_R_LEFT:
-        return &I_cursor_POINT_R_LEFT_01_f;
-    case CAS_POINT_L_UP:
-        return &I_cursor_POINT_L_UP_01_f;
-    case CAS_POINT_L_RIGHT:
-        return &I_cursor_POINT_L_RIGHT_01_f;
-    case CAS_POINT_L_DOWN:
-        return &I_cursor_POINT_L_DOWN_01_f;
-    case CAS_POINT_L_LEFT:
-        return &I_cursor_POINT_L_LEFT_01_f;
-    default:
-        return NULL;
-    }
-}
-
-const Icon* get_cursor_sprite_o(Cursor cursor) {
-    switch(cursor.state) {
-    case CAS_SELECT:
-        return &I_cursor_SELECT_01_o;
-    case CAS_PET:
-        return &I_cursor_PET_01_o;
-    case CAS_GRAB:
-        return &I_cursor_GRAB_01_o;
-    case CAS_DROP:
-        return &I_cursor_DROP_01_o;
-    case CAS_POINT_R_UP:
-        return &I_cursor_POINT_R_UP_01_o;
-    case CAS_POINT_R_RIGHT:
-        return &I_cursor_POINT_R_RIGHT_01_o;
-    case CAS_POINT_R_DOWN:
-        return &I_cursor_POINT_R_DOWN_01_o;
-    case CAS_POINT_R_LEFT:
-        return &I_cursor_POINT_R_LEFT_01_o;
-    case CAS_POINT_L_UP:
-        return &I_cursor_POINT_L_UP_01_o;
-    case CAS_POINT_L_RIGHT:
-        return &I_cursor_POINT_L_RIGHT_01_o;
-    case CAS_POINT_L_DOWN:
-        return &I_cursor_POINT_L_DOWN_01_o;
-    case CAS_POINT_L_LEFT:
-        return &I_cursor_POINT_L_LEFT_01_o;
-    default:
-        return NULL;
-    }
-}
+const TriBlendFrameSequence cursor_sprites[] = {
+    // NOLINT(*-interfaces-global-init)
+    [CAS_SELECT] =
+        (TriBlendFrameSequence){
+            .num_frames = 1,
+            .frames =
+                (TriBlendFrame[]){
+                    {.s = &I_cursor_SELECT_01_s,
+                     .f = &I_cursor_SELECT_01_f,
+                     .o = &I_cursor_SELECT_01_o},
+                }},
+    [CAS_PET] =
+        (TriBlendFrameSequence){
+            .num_frames = 1,
+            .frames =
+                (TriBlendFrame[]){
+                    {.s = &I_cursor_PET_01_s, .f = &I_cursor_PET_01_f, .o = &I_cursor_PET_01_o},
+                }},
+    [CAS_GRAB] =
+        (TriBlendFrameSequence){
+            .num_frames = 1,
+            .frames =
+                (TriBlendFrame[]){
+                    {.s = &I_cursor_GRAB_01_s, .f = &I_cursor_GRAB_01_f, .o = &I_cursor_GRAB_01_o},
+                }},
+    [CAS_DROP] =
+        (TriBlendFrameSequence){
+            .num_frames = 1,
+            .frames =
+                (TriBlendFrame[]){
+                    {.s = &I_cursor_DROP_01_s, .f = &I_cursor_DROP_01_f, .o = &I_cursor_DROP_01_o},
+                }},
+};
 
 int cursor_handle_input_event(Cursor* cursor, InputEvent event) {
     switch(event.key) {
@@ -124,15 +65,25 @@ int cursor_handle_input_event(Cursor* cursor, InputEvent event) {
     return 0;
 }
 
-void cursor_draw(Cursor cursor, Canvas* canvas) {
-    const Icon* graphic = get_cursor_sprite_s(cursor);
-    canvas_set_color(canvas, ColorBlack);
-    canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, graphic);
+void cursor_draw(Cursor cursor, Canvas* canvas, const uint8_t frame, const bool invert) {
+    // const uint8_t even_frame = frame % 2;
+    // const Point2D draw_point = room_screen_to_world(dootie.pos);
 
-    canvas_set_color(canvas, ColorWhite);
-    graphic = get_cursor_sprite_f(cursor);
-    canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, graphic);
+    const TriBlendFrameSequence seq = cursor_sprites[cursor.state];
+    const TriBlendFrame tri_blend_frame = seq.frames[frame % seq.num_frames];
 
-    graphic = get_cursor_sprite_o(cursor);
-    canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, graphic);
+    canvas_set_color(canvas, invert ? ColorWhite : ColorBlack);
+    canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, tri_blend_frame.s);
+
+    canvas_set_color(canvas, invert ? ColorBlack : ColorWhite);
+    canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, tri_blend_frame.f);
+
+    // add a weird phase to drawing highlighted characters
+    if(invert) {
+        const bool is_even_sequence = 0 == seq.num_frames % 2;
+        canvas_set_color(canvas, frame % (is_even_sequence ? 3 : 2) ? ColorBlack : ColorWhite);
+    }
+    canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, tri_blend_frame.o);
+
+    // @TODO: Draw dropshadow if carrying things
 }

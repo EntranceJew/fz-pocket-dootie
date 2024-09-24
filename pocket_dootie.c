@@ -85,7 +85,7 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
         dootie_draw(dootie, canvas, frame, closest_dootie_index == dootie_index);
     }
 
-    cursor_draw(cursor, canvas);
+    cursor_draw(cursor, canvas, 1, false);
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef

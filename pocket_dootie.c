@@ -6,6 +6,7 @@
 #include <furi_hal.h>
 #include <gui/gui.h>
 #include <input/input.h>
+#include <toolbox/stream/file_stream.h>
 #include <storage/storage.h>
 
 // Screen is 128x64 px
@@ -23,6 +24,10 @@
 
 // this is bullshit
 #define MAX_DOOTIES 16
+
+//region Globals
+static uint32_t last_simulation;
+//endregion Globals
 
 //region Starting Data
 static uint8_t max_dootie_index = 4;
@@ -96,6 +101,47 @@ static void app_input_callback(InputEvent* input_event, void* ctx) {
     furi_message_queue_put(event_queue, input_event, FuriWaitForever);
 }
 
+static void load_world_state() {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    Stream* file_stream = file_stream_alloc(storage);
+    if(file_stream_open(
+           file_stream, APP_DATA_PATH("world_state.txt"), FSAM_READ, FSOM_OPEN_EXISTING)) {
+        FuriString* line_string = furi_string_alloc();
+        if(stream_read_line(file_stream, line_string)) {
+            last_simulation = furi_hal_rtc_get_timestamp();
+            sscanf(furi_string_get_cstr(line_string), "%lu", &last_simulation);
+        }
+        furi_string_free(line_string);
+    }
+
+    file_stream_close(file_stream);
+    stream_free(file_stream);
+    furi_record_close(RECORD_STORAGE);
+}
+
+static void save_world_state() {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    Stream* file_stream = file_stream_alloc(storage);
+
+    if(file_stream_open(
+           file_stream, APP_DATA_PATH("world_state.txt"), FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
+        FuriString* line_string = furi_string_alloc_printf("%lu", last_simulation);
+
+        const size_t written = stream_write_string(file_stream, line_string);
+        if(written > 0) {
+            FURI_LOG_D(TAG, "DATA WAS RECORDED %zu", written);
+        } else {
+            FURI_LOG_D(TAG, "AINT WROTE SHIT");
+        }
+
+        furi_string_free(line_string);
+    }
+    file_stream_close(file_stream);
+
+    stream_free(file_stream);
+    furi_record_close(RECORD_STORAGE);
+}
+
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
 int32_t main_app(void* p) {
     UNUSED(p);
@@ -109,6 +155,12 @@ int32_t main_app(void* p) {
     Gui* gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(gui, view_port, GuiLayerFullscreen);
 
+    // LOADING WORLD, TICK-WARP
+    FURI_LOG_D(TAG, "starting out: %lu", last_simulation);
+    load_world_state();
+    const uint32_t tick_warp = furi_hal_rtc_get_timestamp() - last_simulation;
+    FURI_LOG_D(TAG, "tick-warping: %lu time!", tick_warp);
+
     InputEvent event;
     while(true) {
         const FuriStatus msg = furi_message_queue_get(event_queue, &event, QUEUE_TIMEOUT);
@@ -121,8 +173,13 @@ int32_t main_app(void* p) {
         }
 
         // refresh screen
+        // @TODO: skip draws if nothing needs to change?
         view_port_update(view_port);
+        last_simulation = furi_hal_rtc_get_timestamp();
     }
+
+    // CLOSE SIMULATION
+    save_world_state();
 
     // shutdown
     view_port_enabled_set(view_port, false);

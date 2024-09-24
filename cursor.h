@@ -2,7 +2,7 @@
 #include <dootie.h>
 #include <input/input.h>
 
-typedef enum {
+typedef enum CursorAnimationState {
     CAS_SELECT,
     CAS_PET,
     CAS_GRAB,
@@ -18,7 +18,7 @@ typedef enum {
     CAS_POINT_L_LEFT,
 } CursorAnimationState;
 
-typedef struct {
+typedef struct Cursor {
     Point2D pos;
     Point2D move_speed;
     Point2D hot_spot_offset;

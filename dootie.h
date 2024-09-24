@@ -5,11 +5,11 @@
 #include <gui/gui.h>
 #include <gui/icon_i.h>
 
-typedef struct {
+typedef struct Point2D {
     int8_t x, y;
 } Point2D;
 
-typedef enum {
+typedef enum DootieAnimationState {
     DAS_DEAD,
     DAS_EGG,
     DAS_IDLE,
@@ -30,20 +30,33 @@ typedef enum {
     DAS_POOP,
     DAS_ATTACK,
     // DAS_HATCH,
+
+    _DAS_MAX_VALUE,
 } DootieAnimationState;
 
-typedef struct {
+typedef struct TriBlendFrame {
+    const Icon* s;
+    const Icon* f;
+    const Icon* o;
+} TriBlendFrame;
+
+typedef struct TriBlendFrameSequence {
+    uint8_t num_frames;
+    TriBlendFrame* frames;
+} TriBlendFrameSequence;
+
+typedef struct Dootie {
     Point2D pos;
     DootieAnimationState state;
 } Dootie;
 
-typedef struct {
+typedef struct DootieWorld {
     char* playerName;
     uint32_t currency;
     uint32_t poops;
 } DootieWorld;
 
-typedef struct {
+typedef struct DootieSave {
     bool alarmEnabled;
     DateTime alarmTime;
 } DootieSave;

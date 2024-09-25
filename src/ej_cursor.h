@@ -6,13 +6,6 @@
 #ifdef EJ_CURSOR_IMPLEMENTATION
 #undef EJ_CURSOR_IMPLEMENTATION // don't implement more than once
 
-// if we've already included leakcheck before, undefine the macros
-//#ifdef malloc
-//#undef malloc
-//#undef free
-//#undef realloc
-//#endif
-
 #ifndef EJ_CURSOR_FURI_TAG
 #define EJ_CURSOR_FURI_TAG "EJ_CURSOR"
 #endif
@@ -45,7 +38,6 @@ typedef struct Cursor {
 } Cursor;
 
 TriBlendFrameSequence cursor_sprites[] = {
-    // NOLINT(*-interfaces-global-init)
     [CAS_SELECT] =
         (TriBlendFrameSequence){
             .num_frames = 1,
@@ -130,7 +122,7 @@ inline extern void
     }
     canvas_draw_icon(canvas, cursor.pos.x, cursor.pos.y, tri_blend_frame.outline);
 
-    // @TODO: Draw dropshadow if carrying things
+    // @TODO: Draw drop-shadow if carrying things
 }
 #endif // EJ_CURSOR_IMPLEMENTATION
 

@@ -1,8 +1,8 @@
 // #include "cursor.h"
 #define EJ_MATH_IMPLEMENTATION
 #include "src/ej_math.h"
-#define EJ_ROOM_IMPLEMENTATION
-#include "src/ej_room.h"
+// #define EJ_ROOM_IMPLEMENTATION
+// #include "src/ej_room.h"
 #define EJ_DOOTIE_IMPLEMENTATION
 #include "src/ents/ej_dootie.h"
 #define EJ_CURSOR_IMPLEMENTATION
@@ -51,6 +51,13 @@ static Cursor cursor = {
     .state = CAS_SELECT,
 };
 //endregion Starting Data
+
+static uint32_t stopwatch_ticks() {
+    const uint32_t now_timestamp = furi_hal_rtc_get_timestamp();
+    const uint32_t past_ticks = now_timestamp - last_simulation;
+    last_simulation = now_timestamp;
+    return past_ticks;
+}
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
 static void app_draw_callback(Canvas* canvas, void* ctx) {
@@ -101,6 +108,22 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
+static void app_think_callback(const uint32_t ticks, void* ctx) {
+    UNUSED(ctx);
+
+    uint8_t i = 0;
+    for(i = 0; i < max_dootie_index; i++) {
+        Dootie* dootie = &dooties[i];
+        // const uint8_t dootie_index = i;
+        // const uint8_t frame = curr_dt.second + dootie_index;
+
+        dootie_tick(dootie, ticks);
+        FURI_LOG_D(
+            TAG, "thinking as Dootie#%i: %lu time! (lifetime: %lu)", i, ticks, dootie->ticks);
+    }
+}
+
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 static void app_input_callback(InputEvent* input_event, void* ctx) {
     furi_assert(ctx);
 
@@ -115,7 +138,8 @@ static void load_world_state() {
            file_stream, APP_DATA_PATH("world_state.txt"), FSAM_READ, FSOM_OPEN_EXISTING)) {
         FuriString* line_string = furi_string_alloc();
         if(stream_read_line(file_stream, line_string)) {
-            last_simulation = furi_hal_rtc_get_timestamp();
+            // if last_simulation is nothing:
+            // last_simulation = furi_hal_rtc_get_timestamp();
             sscanf(furi_string_get_cstr(line_string), "%lu", &last_simulation);
         }
         furi_string_free(line_string);
@@ -138,7 +162,7 @@ static void save_world_state() {
         if(written > 0) {
             FURI_LOG_D(TAG, "DATA WAS RECORDED %zu", written);
         } else {
-            FURI_LOG_D(TAG, "AINT WROTE SHIT");
+            FURI_LOG_D(TAG, "AIN'T WROTE SHIT");
         }
 
         furi_string_free(line_string);
@@ -165,7 +189,7 @@ int32_t main_app(void* p) {
     // LOADING WORLD, TICK-WARP
     FURI_LOG_D(TAG, "starting out: %lu", last_simulation);
     load_world_state();
-    const uint32_t tick_warp = furi_hal_rtc_get_timestamp() - last_simulation;
+    uint32_t tick_warp = stopwatch_ticks();
     FURI_LOG_D(TAG, "tick-warping: %lu time!", tick_warp);
 
     InputEvent event;
@@ -182,7 +206,13 @@ int32_t main_app(void* p) {
         // refresh screen
         // @TODO: skip draws if nothing needs to change?
         view_port_update(view_port);
-        last_simulation = furi_hal_rtc_get_timestamp();
+
+        // @TODO: separate draw logic from the think logic!
+        tick_warp = stopwatch_ticks();
+        if(tick_warp > 0) {
+            FURI_LOG_D(TAG, "thinking (normal): %lu time!", tick_warp);
+            app_think_callback(tick_warp, p);
+        }
     }
 
     // CLOSE SIMULATION

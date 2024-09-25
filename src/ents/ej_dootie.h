@@ -6,6 +6,8 @@
 #endif
 
 #include "../ej_math.h"
+#define EJ_ROOM_IMPLEMENTATION
+#include "../ej_room.h"
 #include <pocket_dootie_icons.h>
 
 #include <datetime.h>
@@ -39,6 +41,7 @@ typedef enum DootieAnimationState {
 typedef struct Dootie {
     Point2D pos;
     DootieAnimationState state;
+    uint32_t ticks;
 } Dootie;
 
 typedef struct DootieWorld {
@@ -265,6 +268,29 @@ inline extern void
         canvas_set_color(canvas, frame % (is_even_sequence ? 3 : 2) ? ColorBlack : ColorWhite);
     }
     canvas_draw_icon(canvas, draw_point.x, draw_point.y, tri_blend_frame.outline);
+}
+
+inline extern void dootie_tick(Dootie* dootie, const uint64_t ticks) {
+    dootie->ticks += ticks;
+
+    const uint64_t time_scale = 1;
+
+    const uint64_t idle = time_scale * 3;
+    const uint64_t happy = time_scale * 10;
+    const uint64_t sad = time_scale * 15;
+    const uint64_t dead = time_scale * 17;
+
+    if(dootie->ticks >= dead) {
+        dootie->state = DAS_DEAD;
+    } else if(dootie->ticks >= sad) {
+        dootie->state = DAS_SAD;
+    } else if(dootie->ticks >= happy) {
+        dootie->state = DAS_HAPPY;
+    } else if(dootie->ticks >= idle) {
+        dootie->state = DAS_IDLE;
+    } else {
+        dootie->state = DAS_EGG;
+    }
 }
 
 #endif // EJ_DOOTIE_IMPLEMENTATION

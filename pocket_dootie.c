@@ -1,6 +1,13 @@
-#include "cursor.h"
-#include "dootie.h"
-#include "room.h"
+// #include "cursor.h"
+#define EJ_MATH_IMPLEMENTATION
+#include "src/ej_math.h"
+#define EJ_ROOM_IMPLEMENTATION
+#include "src/ej_room.h"
+#define EJ_DOOTIE_IMPLEMENTATION
+#include "src/ents/ej_dootie.h"
+#define EJ_CURSOR_IMPLEMENTATION
+#include "src/ej_cursor.h"
+
 #include <pocket_dootie_icons.h>
 #include <furi.h>
 #include <furi_hal.h>

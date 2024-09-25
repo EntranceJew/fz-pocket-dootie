@@ -32,13 +32,13 @@ if ($Art) {
     foreach ($export in $exports)
     {
         # export all the pictures
-        $launch = @("-b",
+        $ase_args = @("-b",
         $export,
         "--layer", "base",
         "--save-as",
         "$tmp\\{title}_{tag}_{tagframe01}.png"
         );
-        Start-Process -FilePath $ase -ArgumentList $launch -NoNewWindow -Wait
+        Start-Process -FilePath $ase -ArgumentList $ase_args -NoNewWindow -Wait
     }
 
     # prepare to mess with them
@@ -61,13 +61,13 @@ if ($Art) {
     Get-ChildItem -Path $tmp -Recurse -Include ('*.png') | Foreach-Object {
         # export the "_s" SHAPE
         Start-Process -FilePath $magick -NoNewWindow -Wait `
-        -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_s.%e") + $magick_no_alpha + $magick_red_to_white + $magick_blue_to_white + $magick_green_to_black + $magick_force_palette)
+        -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_shape.%e") + $magick_no_alpha + $magick_red_to_white + $magick_blue_to_white + $magick_green_to_black + $magick_force_palette)
         # export the "_f" FILL filenames, which currently handle fill and outline
         Start-Process -FilePath $magick -NoNewWindow -Wait `
-        -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_f.%e") + $magick_no_alpha + $magick_red_to_white + $magick_blue_to_black + $magick_green_to_white + $magick_force_palette)
+        -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_fill.%e") + $magick_no_alpha + $magick_red_to_white + $magick_blue_to_black + $magick_green_to_white + $magick_force_palette)
         # export the "_o" OUTLINE filenames
         Start-Process -FilePath $magick -NoNewWindow -Wait `
-        -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_o.%e") + $magick_no_alpha + $magick_red_to_black + $magick_green_to_white + $magick_blue_to_white + $magick_force_palette)
+        -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_outline.%e") + $magick_no_alpha + $magick_red_to_black + $magick_green_to_white + $magick_blue_to_white + $magick_force_palette)
 
 
         #remove the base file
@@ -96,5 +96,4 @@ if ($View) {
 if ($Log) {
     # mode COM5 BAUD=230400 PARITY=n DATA=8
     "log trace" | plink -load "Flipper"
-    Remove-Item $x -Force
 }

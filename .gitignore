@@ -8,7 +8,12 @@ dist/*
 *.code-workspace
 
 # assets already in the gfx folder
-/images/cursor_*_*_[fso].png
-/images/dootie_*_*_[fso].png
+/images/*_shape.png
+/images/*_fill.png
+/images/*_outline.png
 /images/room.png
-!/images/dootie_IDLE_*_[fso].png
+
+# these are here for demonstration purposes
+!/images/dootie_IDLE_*_shape.png
+!/images/dootie_IDLE_*_fill.png
+!/images/dootie_IDLE_*_outline.png

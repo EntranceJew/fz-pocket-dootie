@@ -65,7 +65,7 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
     const uint8_t finger_x = cursor.pos.x + cursor.hot_spot_offset.x;
     const uint8_t finger_y = cursor.pos.y + cursor.hot_spot_offset.y;
 
-    for(i = 0; i <= max_dootie_index; i++) {
+    for(i = 0; i < max_dootie_index; ++i) {
         const Dootie dootie = dooties[i];
         const bool is_touching =
             // righter than left
@@ -82,7 +82,7 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
         }
     }
 
-    for(i = 0; i <= max_dootie_index; i++) {
+    for(i = 0; i < max_dootie_index; i++) {
         const Dootie dootie = dooties[i];
         const uint8_t dootie_index = i;
         const uint8_t frame = curr_dt.second + dootie_index;

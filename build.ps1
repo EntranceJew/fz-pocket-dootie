@@ -1,4 +1,4 @@
-param (
+﻿param (
     [Switch]$Art,
     [Switch]$Launch,
     [Switch]$View,
@@ -24,19 +24,15 @@ function Kill-Tree {
 if ($Art) {
     New-Item -Path $tmp -ItemType Directory | Out-Null
 
-    $exports = @(
-        "$gfx\dootie.aseprite",
-        "$gfx\cursor.aseprite"
-    );
+    Get-ChildItem -Path "$gfx\\*" -Include ('*.aseprite') | Foreach-Object {
+        Write-Host "exporting: $_"
 
-    foreach ($export in $exports)
-    {
         # export all the pictures
         $ase_args = @("-b",
-        $export,
-        "--layer", "base",
-        "--save-as",
-        "$tmp\\{title}_{tag}_{tagframe01}.png"
+            $_.FullName,
+            "--layer", "base",
+            "--save-as",
+            "$tmp\\{title}_{tag}_{tagframe01}.png"
         );
         Start-Process -FilePath $ase -ArgumentList $ase_args -NoNewWindow -Wait
     }
@@ -51,6 +47,7 @@ if ($Art) {
     $magick_blue_to_black = @("-fill", "#000000", "-opaque", "#0000ff", "+repage");
 
     $magick_force_palette = @(
+        "-define", "preserve-timestamp=true",
         "-dither", "None",
         "-type", "palette",
         "-remap", "$gfx\palette.png",
@@ -58,7 +55,7 @@ if ($Art) {
     );
 
 
-    Get-ChildItem -Path $tmp -Recurse -Include ('*.png') | Foreach-Object {
+    Get-ChildItem -Path "$tmp\\*" -Recurse -Include ('*.png') | Foreach-Object {
         # export the "_s" SHAPE
         Start-Process -FilePath $magick -NoNewWindow -Wait `
         -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_shape.%e") + $magick_no_alpha + $magick_red_to_white + $magick_blue_to_white + $magick_green_to_black + $magick_force_palette)
@@ -69,13 +66,24 @@ if ($Art) {
         Start-Process -FilePath $magick -NoNewWindow -Wait `
         -ArgumentList (@($_.FullName, "-set", "filename:out", "$imgs\\%t_outline.%e") + $magick_no_alpha + $magick_red_to_black + $magick_green_to_white + $magick_blue_to_white + $magick_force_palette)
 
+        Write-Host "processed: $_"
 
         #remove the base file
         Remove-Item $_.FullName | Out-Null
     }
 
+    Get-ChildItem -Path "$imgs\\*" -Recurse -Include ('*.png') | Foreach-Object {
+        # remove all the funny file metadata, please
+        # (this will be illegal in the future)
+        Start-Process -FilePath $magick -NoNewWindow -Wait `
+            -ArgumentList ("mogrify", "-strip", "-define", "preserve-timestamp=true", $_.FullName)
+
+        Write-Host "stripped: $_"
+    }
+
     # nuke the temp directory
     Remove-Item -Path $tmp | Out-Null
+    Write-Host "Art: done ✔"
 }
 
 if ($Launch) {
@@ -95,5 +103,5 @@ if ($View) {
 
 if ($Log) {
     # mode COM5 BAUD=230400 PARITY=n DATA=8
-    "log trace" | plink -load "Flipper"
+    "log trace" | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
 }

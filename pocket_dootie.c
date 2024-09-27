@@ -15,6 +15,8 @@
 #include <input/input.h>
 #include <toolbox/stream/file_stream.h>
 #include <storage/storage.h>
+#include <notification/notification.h>
+#include <notification/notification_messages.h>
 
 // Screen is 128x64 px
 #define SCREEN_X 128
@@ -192,6 +194,9 @@ int32_t main_app(void* p) {
 
     Gui* gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(gui, view_port, GuiLayerFullscreen);
+    NotificationApp* notification = furi_record_open(RECORD_NOTIFICATION);
+
+    notification_message_block(notification, &sequence_display_backlight_enforce_on);
 
     // LOADING WORLD, TICK-WARP
     FURI_LOG_T(TAG, "starting out: %lu", last_simulation);
@@ -233,6 +238,9 @@ int32_t main_app(void* p) {
 
     // CLOSE SIMULATION
     save_world_state();
+
+    // Return backlight to normal state
+    notification_message(notification, &sequence_display_backlight_enforce_auto);
 
     // shutdown
     view_port_enabled_set(view_port, false);

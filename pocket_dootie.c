@@ -17,10 +17,10 @@
 #include <storage/storage.h>
 #include <notification/notification.h>
 #include <notification/notification_messages.h>
+#include <lib/toolbox/stream/stream.h>
 
-// Screen is 128x64 px
-#define SCREEN_X 128
-#define SCREEN_Y 64
+// hunka bunka radoos
+#define SIZEOF(arr) sizeof(arr) / sizeof(*arr)
 
 // stops working when made to be 25:
 #define QUEUE_TIMEOUT 100
@@ -31,21 +31,27 @@
 #define DOOTIE_W           16
 #define DOOTIE_H           16
 
+#define MAX_NAME_LENGTH 255
+
 // this is bullshit
 #define MAX_DOOTIES 16
 
 //region Globals
 static uint32_t last_simulation;
+static Point2D FLOOR_POINTS[] = {
+    // top-left
+    {32, 32},
+    // top-right
+    {65 - DOOTIE_W, 32},
+    // bottom-left
+    {1, 63 - DOOTIE_H},
+    // bottom-right
+    {126 - DOOTIE_W, 63 - DOOTIE_H}};
 //endregion Globals
 
 //region Starting Data
-static uint8_t max_dootie_index = 4;
-static Dootie dooties[MAX_DOOTIES] = {
-    (Dootie){.pos = {46, 36}, .state = DAS_EAT},
-    (Dootie){.pos = {32, 28}, .state = DAS_IDLE},
-    (Dootie){.pos = {16, 46}, .state = DAS_HAPPY},
-    (Dootie){.pos = {25, 36}, .state = DAS_EGG},
-    (Dootie){.pos = {76, 42}, .state = DAS_DEPRESSED}};
+static uint8_t max_dootie_index;
+static Dootie dooties[MAX_DOOTIES];
 static Cursor cursor = {
     .pos = {.x = 32, .y = 32},
     .move_speed = {.x = 4, .y = 2},
@@ -138,6 +144,7 @@ static void app_input_callback(InputEvent* input_event, void* ctx) {
 }
 
 static void load_world_state() {
+    // load the world
     Storage* storage = furi_record_open(RECORD_STORAGE);
     Stream* file_stream = file_stream_alloc(storage);
     if(file_stream_open(
@@ -150,9 +157,45 @@ static void load_world_state() {
         }
         furi_string_free(line_string);
     }
-
     file_stream_close(file_stream);
     stream_free(file_stream);
+    furi_record_close(RECORD_STORAGE);
+
+    // load the dooties
+    storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    FuriString* directory_thus_far = furi_string_alloc_set_str(STORAGE_APP_DATA_PATH_PREFIX);
+
+    const char* gonk = furi_string_get_cstr(directory_thus_far);
+    if(storage_dir_open(file, gonk)) {
+        FileInfo file_info;
+        char name[MAX_NAME_LENGTH];
+        bool read_done = false;
+
+        while(storage_dir_read(file, &file_info, name, MAX_NAME_LENGTH)) {
+            read_done = true;
+            if(file_info_is_dir(&file_info)) {
+                continue;
+            }
+
+            Dootie dootie;
+            if(dootie_load_from_file(name, &dootie) && max_dootie_index < MAX_DOOTIES) {
+                dooties[max_dootie_index] = dootie;
+                max_dootie_index++;
+            } else {
+                FURI_LOG_D(TAG, "this dootie grew up wrong... %s", name);
+            }
+        }
+        if(!read_done) {
+            FURI_LOG_E(TAG, "there were no dooties!!!");
+        }
+    } else {
+        FURI_LOG_E(TAG, "could not open %p", directory_thus_far);
+    }
+
+    furi_string_free(directory_thus_far);
+    storage_dir_close(file);
+    storage_file_free(file);
     furi_record_close(RECORD_STORAGE);
 }
 
@@ -165,18 +208,59 @@ static void save_world_state() {
         FuriString* line_string = furi_string_alloc_printf("%lu", last_simulation);
 
         const size_t written = stream_write_string(file_stream, line_string);
-        if(written > 0) {
-            FURI_LOG_D(TAG, "DATA WAS RECORDED %zu", written);
-        } else {
-            FURI_LOG_D(TAG, "AIN'T WROTE SHIT");
+        if(written <= 0) {
+            FURI_LOG_E(
+                TAG,
+                "WORLD STATE FAILED TO WRITE: %i / %i",
+                written,
+                furi_string_size(line_string));
         }
 
         furi_string_free(line_string);
     }
     file_stream_close(file_stream);
-
     stream_free(file_stream);
     furi_record_close(RECORD_STORAGE);
+
+    // now the dooties
+    uint8_t i = 0;
+    for(i = 0; i < max_dootie_index; ++i) {
+        dootie_save_to_file(dooties[i]);
+    }
+}
+
+void app_boot_callback(void) {
+    // only add dooties if we have no dooties
+    if(max_dootie_index <= 0) {
+        uint8_t i = 0;
+        FURI_LOG_I(TAG, "all your dooties were dead so you get new ones for free!!!");
+
+        max_dootie_index = 3;
+        dooties[0] = (Dootie){.pos = {46, 36}, .state = DAS_EGG, .ticks = 0};
+        dooties[1] = (Dootie){.pos = {31, 36}, .state = DAS_BACK, .ticks = 0};
+        dooties[2] = (Dootie){.pos = {64, 36}, .state = DAS_DEPRESSED, .ticks = 0};
+        // (Dootie){.pos = {32, 28}, .state = DAS_IDLE},
+        // (Dootie){.pos = {16, 46}, .state = DAS_HAPPY},
+        // (Dootie){.pos = {25, 36}, .state = DAS_EGG},
+        // (Dootie){.pos = {76, 42}, .state = DAS_DEPRESSED},
+        // };
+
+        for(i = 0; i < max_dootie_index; i++) {
+            Dootie* dootie = &dooties[i];
+            dootie->pos = math_point_within_points(FLOOR_POINTS, SIZEOF(FLOOR_POINTS));
+
+            dootie_init(dootie);
+        }
+
+        // always randomize dooties
+        FURI_LOG_T(TAG, "CHANGE PLACES!!!");
+        for(i = 0; i < max_dootie_index; i++) {
+            Dootie* dootie = &dooties[i];
+            dootie->pos = math_point_within_points(FLOOR_POINTS, SIZEOF(FLOOR_POINTS));
+
+            FURI_LOG_D(TAG, "dootie%i: now at (%i,%i)", i, dootie->pos.x, dootie->pos.y);
+        }
+    }
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef

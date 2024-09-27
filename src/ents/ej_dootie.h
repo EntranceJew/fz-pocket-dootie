@@ -2,16 +2,22 @@
 #undef EJ_DOOTIE_IMPLEMENTATION // don't implement more than once
 
 #ifndef EJ_DOOTIE_FURI_TAG
-#define EJ_DOOTIE_FURI_TAG "EJ_DOOTIE"
+#define EJ_DOOTIE_FURI_TAG          "EJ_DOOTIE"
+// this is absolutely perfect
+#define POCKET_DOOTIE_APP_EXTENSION ".dootie"
 #endif
 
 #include "../ej_math.h"
 #define EJ_ROOM_IMPLEMENTATION
 #include "../ej_room.h"
 #include <pocket_dootie_icons.h>
-
 #include <datetime.h>
 #include <gui/canvas.h>
+#include <furi_hal_random.h>
+#include <core/record.h>
+#include <storage/storage.h>
+#include <stream/file_stream.h>
+#include <stream/stream.h>
 
 typedef enum DootieAnimationState {
     DAS_DEAD,
@@ -39,6 +45,7 @@ typedef enum DootieAnimationState {
 } DootieAnimationState;
 
 typedef struct Dootie {
+    uint8_t uuid[16];
     Point2D pos;
     DootieAnimationState state;
     uint32_t ticks;
@@ -247,6 +254,11 @@ const TriBlendFrameSequence dootie_sprites[] = {
                 },
         },
 };
+//</editor-fold>
+
+inline extern void dootie_init(Dootie* dootie) {
+    furi_hal_random_fill_buf(dootie->uuid, sizeof(dootie->uuid));
+}
 
 inline extern void
     dootie_draw(const Dootie dootie, Canvas* canvas, const uint8_t frame, const bool invert) {
@@ -291,6 +303,90 @@ inline extern void dootie_tick(Dootie* dootie, const uint64_t ticks) {
     } else {
         dootie->state = DAS_EGG;
     }
+}
+
+inline extern void dootie_save_to_file(Dootie dootie) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    Stream* file_stream = file_stream_alloc(storage);
+
+    FuriString* dootie_hex_tag = furi_string_alloc();
+    for(uint8_t j = 0; j < sizeof(dootie.uuid); ++j) {
+        furi_string_cat_printf(dootie_hex_tag, "%02X", dootie.uuid[j]);
+    }
+
+    FuriString* absolute_dootie_save_path = furi_string_alloc_printf(
+        "%s%s%s",
+        APP_DATA_PATH(""),
+        furi_string_get_cstr(dootie_hex_tag),
+        POCKET_DOOTIE_APP_EXTENSION);
+    const char* absolute_dootie_save_path_string = furi_string_get_cstr(absolute_dootie_save_path);
+
+    if(file_stream_open(
+           file_stream, absolute_dootie_save_path_string, FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
+        stream_write(file_stream, (uint8_t*)&dootie, sizeof(dootie));
+        FURI_LOG_D(
+            EJ_DOOTIE_FURI_TAG,
+            "writing: %s (%u / %u)",
+            absolute_dootie_save_path_string,
+            sizeof(dootie),
+            sizeof(Dootie));
+    } else {
+        FURI_LOG_D(EJ_DOOTIE_FURI_TAG, "did not write to %s", absolute_dootie_save_path_string);
+    }
+
+    furi_string_free(absolute_dootie_save_path);
+    file_stream_close(file_stream);
+    stream_free(file_stream);
+
+    furi_string_free(dootie_hex_tag);
+
+    furi_record_close(RECORD_STORAGE);
+}
+
+inline extern bool dootie_load_from_file(const char name[], Dootie* dootie) {
+    bool ret = false;
+    FuriString* full_path = furi_string_alloc_printf("%s%s", APP_DATA_PATH(""), name);
+    if(furi_string_end_with_str(full_path, POCKET_DOOTIE_APP_EXTENSION)) {
+        Storage* storage = furi_record_open(RECORD_STORAGE);
+        Stream* file_stream = file_stream_alloc(storage);
+
+        if(file_stream_open(
+               file_stream, furi_string_get_cstr(full_path), FSAM_READ, FSOM_OPEN_EXISTING)) {
+            const size_t size = stream_size(file_stream);
+            FURI_LOG_I(
+                EJ_DOOTIE_FURI_TAG,
+                "attempting to load dootie: %s, %i",
+                furi_string_get_cstr(full_path),
+                size);
+            if(stream_read(file_stream, (uint8_t*)dootie, stream_size(file_stream))) {
+                /*** IMPORTANT: LOGIC FOR PREVENTING LOADING ***/
+                if(DAS_DEAD == dootie->state) {
+                    FURI_LOG_I(
+                        EJ_DOOTIE_FURI_TAG,
+                        "ignoring dead dootie: %s",
+                        furi_string_get_cstr(full_path));
+                    ret = false;
+                } else {
+                    ret = true;
+                }
+            } else {
+                FURI_LOG_E(
+                    EJ_DOOTIE_FURI_TAG,
+                    "could not read dootie: %s",
+                    furi_string_get_cstr(full_path));
+            }
+        } else {
+            FURI_LOG_E(
+                EJ_DOOTIE_FURI_TAG, "could not open dootie: %s", furi_string_get_cstr(full_path));
+        }
+
+        file_stream_close(file_stream);
+        stream_free(file_stream);
+    }
+
+    furi_string_free(full_path);
+    furi_record_close(RECORD_STORAGE);
+    return ret;
 }
 
 #endif // EJ_DOOTIE_IMPLEMENTATION

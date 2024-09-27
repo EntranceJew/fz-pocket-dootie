@@ -114,6 +114,9 @@ static void app_think_callback(const uint32_t ticks, void* ctx) {
     uint8_t i = 0;
     for(i = 0; i < max_dootie_index; i++) {
         Dootie* dootie = &dooties[i];
+        if(dootie->state == DAS_DEAD) {
+            continue;
+        }
         // const uint8_t dootie_index = i;
         // const uint8_t frame = curr_dt.second + dootie_index;
 

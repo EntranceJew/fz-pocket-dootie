@@ -54,7 +54,8 @@ static Cursor cursor = {
 
 static uint32_t stopwatch_ticks() {
     const uint32_t now_timestamp = furi_hal_rtc_get_timestamp();
-    const uint32_t past_ticks = now_timestamp - last_simulation;
+    const uint32_t past_ticks = now_timestamp - (last_simulation == 0 ? now_timestamp : last_simulation);
+
     last_simulation = now_timestamp;
     return past_ticks;
 }
@@ -121,7 +122,7 @@ static void app_think_callback(const uint32_t ticks, void* ctx) {
         // const uint8_t frame = curr_dt.second + dootie_index;
 
         dootie_tick(dootie, ticks);
-        FURI_LOG_D(
+        FURI_LOG_T(
             TAG, "thinking as Dootie#%i: %lu time! (lifetime: %lu)", i, ticks, dootie->ticks);
     }
 }
@@ -180,6 +181,9 @@ static void save_world_state() {
 int32_t main_app(void* p) {
     UNUSED(p);
 
+    furi_delay_ms(1000);
+    FURI_LOG_T(TAG, "We delayed loading to allow plink time to join after launch.");
+
     FuriMessageQueue* event_queue = furi_message_queue_alloc(QUEUE_COUNT, sizeof(InputEvent));
 
     ViewPort* view_port = view_port_alloc();
@@ -190,10 +194,17 @@ int32_t main_app(void* p) {
     gui_add_view_port(gui, view_port, GuiLayerFullscreen);
 
     // LOADING WORLD, TICK-WARP
-    FURI_LOG_D(TAG, "starting out: %lu", last_simulation);
+    FURI_LOG_T(TAG, "starting out: %lu", last_simulation);
     load_world_state();
     uint32_t tick_warp = stopwatch_ticks();
-    FURI_LOG_D(TAG, "tick-warping: %lu time!", tick_warp);
+    FURI_LOG_T(TAG, "about to tick-warp (boot): %lu time(s)!", tick_warp);
+    uint32_t i;
+    for(i = 0; i < tick_warp; ++i) {
+        app_think_callback(1, p);
+    }
+
+    // @TODO: DEVELOPER BOOTSTRAP, IF THIS FUNCTION ISN'T EMPTY WHEN WE GO GOLD, FIRE ALARM
+    app_boot_callback();
 
     InputEvent event;
     while(true) {
@@ -213,8 +224,10 @@ int32_t main_app(void* p) {
         // @TODO: separate draw logic from the think logic!
         tick_warp = stopwatch_ticks();
         if(tick_warp > 0) {
-            FURI_LOG_D(TAG, "thinking (normal): %lu time!", tick_warp);
-            app_think_callback(tick_warp, p);
+            FURI_LOG_T(TAG, "about to tick (normal): %lu time(s)!", tick_warp);
+            for(i = 0; i < tick_warp; ++i) {
+                app_think_callback(1, p);
+            }
         }
     }
 

@@ -86,6 +86,8 @@ if ($Art) {
     Write-Host "Art: done ✔"
 }
 
+$NoLog = $False
+
 if ($Launch) {
     $proc = Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "qFlipper.exe" }
     if ($proc) {
@@ -94,14 +96,23 @@ if ($Launch) {
     Start-Sleep -Seconds 5
 
     ufbt APPID=pocket_dootie VERBOSE=true format
+    $NoLog = $NoLog -or $LastExitCode -gt 0
     ufbt APPID=pocket_dootie VERBOSE=true launch
+    $NoLog = $NoLog -or $LastExitCode -gt 0
 }
 
 if ($View) {
     & $qflipper
 }
 
-if ($Log) {
+if ($NoLog) {
+    Write-Host "Launch: error ❌"
+}
+if ($Log -and -not $NoLog) {
     # mode COM5 BAUD=230400 PARITY=n DATA=8
-    "log trace" | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
+#    "log trace" | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
+    "log debug" | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
+#    "log info " | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
+#    "log warn" | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
+#    "log error" | plink -serial \\.\COM5 -sercfg "230400,8,n,1,n"
 }
